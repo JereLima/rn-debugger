@@ -4,7 +4,7 @@ const MAX_ARRAY = 100;
 const MAX_KEYS = 100;
 
 /** Converte qualquer valor em algo JSON-safe e com tamanho limitado. */
-export function safeSerialize(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
+export function safeSerialize(value: unknown, depth = 0, seen = new WeakSet<object>(), maxDepth = MAX_DEPTH): unknown {
   if (value === null || value === undefined) return value;
   const t = typeof value;
   if (t === "number" || t === "boolean") return value;
@@ -24,25 +24,25 @@ export function safeSerialize(value: unknown, depth = 0, seen = new WeakSet<obje
     };
   }
   if (t !== "object") return String(value);
-  if (depth >= MAX_DEPTH) return "[Max depth]";
+  if (depth >= maxDepth) return "[Max depth]";
   if (seen.has(value as object)) return "[Circular]";
   seen.add(value as object);
   try {
     if (Array.isArray(value)) {
-      const head = value.slice(0, MAX_ARRAY).map((v) => safeSerialize(v, depth + 1, seen));
+      const head = value.slice(0, MAX_ARRAY).map((v) => safeSerialize(v, depth + 1, seen, maxDepth));
       if (value.length > MAX_ARRAY) head.push(`… +${value.length - MAX_ARRAY} items`);
       return head;
     }
     if (value instanceof Map) {
       return { __map: [...value.entries()].slice(0, MAX_KEYS)
-        .map(([k, v]) => [safeSerialize(k, depth + 1, seen), safeSerialize(v, depth + 1, seen)]) };
+        .map(([k, v]) => [safeSerialize(k, depth + 1, seen, maxDepth), safeSerialize(v, depth + 1, seen, maxDepth)]) };
     }
     if (value instanceof Set) {
-      return { __set: [...value.values()].slice(0, MAX_KEYS).map((v) => safeSerialize(v, depth + 1, seen)) };
+      return { __set: [...value.values()].slice(0, MAX_KEYS).map((v) => safeSerialize(v, depth + 1, seen, maxDepth)) };
     }
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as object).slice(0, MAX_KEYS)) {
-      out[k] = safeSerialize(v, depth + 1, seen);
+      out[k] = safeSerialize(v, depth + 1, seen, maxDepth);
     }
     return out;
   } finally {

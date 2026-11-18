@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import { Connector } from "./connector";
 import { patchConsole } from "./console";
 import { patchFetch, patchNetwork, shouldIgnore } from "./network";
+import { patchAsyncStorage, patchMMKV } from "./storage";
 
 export interface AddDebugOptions {
   /** Host explícito, ex.: "192.168.1.5". Sobrepõe descoberta automática. */
@@ -20,6 +21,34 @@ export function onDeviceCommand(fn: (msg: any) => void) { deviceCommandHandler =
 export function getConnector(): Connector | null { return connector; }
 export function isDebugging(): boolean { return !!connector?.isConnected; }
 export function sendRaw(msg: object) { connector?.send(msg); }
+
+const storageRefreshers = new Map<string, () => void>();
+
+export function debugAsyncStorageInternal(AsyncStorage: any) {
+  if (!connector || !AsyncStorage) return;
+  if (storageRefreshers.has("async-storage")) return; // idempotente
+  try {
+    const refresh = patchAsyncStorage((m) => { try { connector?.send(m); } catch { /* ignore */ } }, AsyncStorage);
+    storageRefreshers.set("async-storage", refresh);
+  } catch { /* nunca quebrar o app do usuário */ }
+}
+
+export function debugMMKVInternal(instance: any, name = "mmkv") {
+  if (!connector || !instance) return;
+  const id = `mmkv:${name}`;
+  if (storageRefreshers.has(id)) return; // idempotente
+  try {
+    const refresh = patchMMKV((m) => { try { connector?.send(m); } catch { /* ignore */ } }, instance, name);
+    storageRefreshers.set(id, refresh);
+  } catch { /* nunca quebrar o app do usuário */ }
+}
+
+// Comandos desktop→device (chegam pelo onMessage do Connector):
+onDeviceCommand((msg) => {
+  try {
+    if (msg?.type === "storage.get") storageRefreshers.get(String(msg.storage))?.();
+  } catch { /* ignore */ }
+});
 
 /** Candidatos, em ordem de prioridade. */
 export function buildCandidates(host?: string, devHost?: string): string[] {

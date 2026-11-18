@@ -30,6 +30,20 @@ export interface NetEntry {
   error?: string;
 }
 
+export interface StateSnapshot {
+  current: unknown;
+  previous: unknown;
+  ts: number;
+  count: number;
+}
+
+export interface StorageEntry { key: string; kind: string; value: unknown }
+export interface StorageData { entries: StorageEntry[]; previous: StorageEntry[] | null; ts: number }
+export interface StorageEventItem {
+  id: number; ts: number; op: "read" | "write" | "delete" | "clear";
+  storage: string; key?: string; value?: unknown;
+}
+
 const MAX_LOGS = 5000;
 const MAX_NETWORK = 1000;
 
@@ -42,6 +56,10 @@ interface Store {
   clients: Record<string, ClientInfo>;
   logs: LogEntry[];
   network: NetEntry[];
+  states: Record<string, StateSnapshot>;
+  storages: Record<string, StorageData>;
+  storageEvents: StorageEventItem[];
+  selectedStorage: string | null;
 
   setServerReady(v: boolean): void;
   setServerError(e: string | null): void;
@@ -54,6 +72,11 @@ interface Store {
   addNetReq(clientId: string, msg: any): void;
   addNetRes(clientId: string, msg: any): void;
   clearNetwork(): void;
+  setStateSnapshot(clientId: string, msg: any): void;
+  setStorageSnapshot(msg: any): void;
+  addStorageEvent(msg: any): void;
+  clearStorageEvents(): void;
+  selectStorage(name: string | null): void;
 }
 
 export const useStore = create<Store>((set) => ({
@@ -64,6 +87,12 @@ export const useStore = create<Store>((set) => ({
   logs: [],
 
   network: [],
+
+  states: {},
+
+  storages: {},
+  storageEvents: [],
+  selectedStorage: null,
 
   setServerReady: (v) => set({ serverReady: v, serverError: null }),
   setServerError: (e) => set({ serverError: e, serverReady: false }),
@@ -127,4 +156,43 @@ export const useStore = create<Store>((set) => ({
       return { network: network.length > MAX_NETWORK ? network.slice(-MAX_NETWORK) : network };
     }),
   clearNetwork: () => set({ network: [] }),
+  setStateSnapshot: (_clientId, msg) =>
+    set((s) => {
+      const name = String(msg.name ?? "state");
+      const prev = s.states[name];
+      return {
+        states: {
+          ...s.states,
+          [name]: {
+            current: msg.state,
+            previous: prev?.current ?? null,
+            ts: msg.ts,
+            count: (prev?.count ?? 0) + 1,
+          },
+        },
+      };
+    }),
+  setStorageSnapshot: (msg) =>
+    set((s) => {
+      const name = String(msg.storage ?? "unknown");
+      const prev = s.storages[name];
+      return {
+        storages: {
+          ...s.storages,
+          [name]: { entries: msg.entries ?? [], previous: prev ? prev.entries : null, ts: msg.ts },
+        },
+        selectedStorage: s.selectedStorage ?? name,
+      };
+    }),
+  addStorageEvent: (msg) =>
+    set((s) => {
+      const op = String(msg.type).replace("storage.", "") as StorageEventItem["op"];
+      const storageEvents = [...s.storageEvents, {
+        id: nextId++, ts: msg.ts, op,
+        storage: String(msg.storage ?? ""), key: msg.key, value: msg.value,
+      }];
+      return { storageEvents: storageEvents.length > 500 ? storageEvents.slice(-500) : storageEvents };
+    }),
+  clearStorageEvents: () => set({ storageEvents: [] }),
+  selectStorage: (name) => set({ selectedStorage: name }),
 }));

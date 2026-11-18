@@ -7,8 +7,8 @@ export type TabId = "console" | "network" | "state" | "storage" | "devtools";
 const TABS: { id: TabId; label: string; icon: any; enabled: boolean }[] = [
   { id: "console", label: "Console", icon: TerminalSquare, enabled: true },
   { id: "network", label: "Network", icon: Globe, enabled: true },
-  { id: "state", label: "State", icon: Database, enabled: false },
-  { id: "storage", label: "Storage", icon: HardDrive, enabled: false },
+  { id: "state", label: "State", icon: Database, enabled: true },
+  { id: "storage", label: "Storage", icon: HardDrive, enabled: true },
   { id: "devtools", label: "React DevTools", icon: Bug, enabled: false },
 ];
 

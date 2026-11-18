@@ -35,9 +35,20 @@ async function doInitBridge() {
       case "log": s.addLog(clientId, msg); break;
       case "network.req": s.addNetReq(clientId, msg); break;
       case "network.res": s.addNetRes(clientId, msg); break;
-      // M3: "state.snapshot" + storage.* | M4.2: "devtools"
+      case "state.snapshot": s.setStateSnapshot(clientId, msg); break;
+      case "storage.snapshot": s.setStorageSnapshot(msg); break;
+      case "storage.read":
+      case "storage.write":
+      case "storage.delete":
+      case "storage.clear": s.addStorageEvent(msg); break;
+      // M4.2: "devtools"
     }
   });
 
   try { s.setLocalIp(await invoke<string | null>("get_local_ip")); } catch { /* ignore */ }
+}
+
+// Envia comando ao device (storage.get, devtools.res, ...).
+export async function sendToDevice(msg: object) {
+  await invoke("ws_broadcast", { server: "sdk", text: JSON.stringify(msg) });
 }
