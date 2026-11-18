@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { Connector } from "./connector";
 import { patchConsole } from "./console";
+import { patchNetwork, shouldIgnore } from "./network";
 
 export interface AddDebugOptions {
   /** Host explícito, ex.: "192.168.1.5". Sobrepõe descoberta automática. */
@@ -58,4 +59,5 @@ export function addDebugInternal(
   });
 
   patchConsole((msg) => { try { connector?.send(msg); } catch { /* ignore */ } });
+  patchNetwork((msg) => { try { connector?.send(msg); } catch { /* ignore */ } }, shouldIgnore);
 }
