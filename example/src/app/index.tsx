@@ -30,6 +30,11 @@ export default function HomeScreen() {
         console.error("falhou", a);
       }} />
       <Btn label="throw error" onPress={() => { throw new Error("crash de teste"); }} />
+      <Btn label='fetch("https://jsonplaceholder.typicode.com/todos/1")'
+        onPress={() => fetch("https://jsonplaceholder.typicode.com/todos/1").then(r => r.json()).then(console.log)} />
+      <Btn label="POST httpbin" onPress={() => fetch("https://httpbin.org/post", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ x: 1 }) })} />
+      <Btn label="fetch 404" onPress={() => fetch("https://jsonplaceholder.typicode.com/nope")} />
     </ScrollView>
   );
 }

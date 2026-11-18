@@ -2,7 +2,11 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useStore } from "./store";
 
+let started = false;
+
 export async function initBridge() {
+  if (started) return; // StrictMode/HMR remontam o App em dev — listeners duplicariam eventos
+  started = true;
   const s = useStore.getState();
 
   await listen<{ port: number }>("sdk-server-ready", () => s.setServerReady(true));
@@ -18,7 +22,9 @@ export async function initBridge() {
     switch (msg?.type) {
       case "hello": s.setHello(clientId, msg); break;
       case "log": s.addLog(clientId, msg); break;
-      // M2: network | M3: "state.snapshot" + storage.* | M4.2: "devtools"
+      case "network.req": s.addNetReq(clientId, msg); break;
+      case "network.res": s.addNetRes(clientId, msg); break;
+      // M3: "state.snapshot" + storage.* | M4.2: "devtools"
     }
   });
 
