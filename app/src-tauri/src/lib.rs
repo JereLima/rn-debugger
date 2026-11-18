@@ -11,7 +11,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             ws::ws_broadcast,
             ws::ws_send_to,
-            ws::get_local_ip
+            ws::get_local_ip,
+            ws::get_servers_ready
         ])
         .setup(move |app| {
             let servers: Vec<(&'static str, u16)> = vec![

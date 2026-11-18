@@ -46,7 +46,11 @@ async function doInitBridge() {
     }
   });
 
-  try { s.setLocalIp(await invoke<string | null>("get_local_ip")); } catch { /* ignore */ }
+  try {
+    s.setLocalIp(await invoke<string | null>("get_local_ip"));
+    const ready = await invoke<string[]>("get_servers_ready").catch(() => [] as string[]);
+    if (ready.includes("sdk")) s.setServerReady(true);
+  } catch { /* ignore */ }
 }
 
 // Envia comando ao device (storage.get, devtools.res, ...).

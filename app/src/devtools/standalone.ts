@@ -1,7 +1,7 @@
 // Roda DENTRO do iframe. Comunica-se com a janela principal via postMessage;
 // a janela principal faz o invoke() no Tauri.
 import "./polyfills";
-import DevtoolsUI from "react-devtools-core/standalone";
+import * as StandaloneNS from "react-devtools-core/standalone";
 
 // WebSocket falso: o que o frontend envia vai pro parent; o que chega do parent
 // é despachado como evento "message".
@@ -40,6 +40,24 @@ class ParentBridgeSocket {
   }
   close() { /* lifecycle controlado pelo parent */ }
 }
+
+// A forma do export varia com o interop CJS↔ESM do bundler
+// (dev: namespace { default: { default: api } }; prod pode diferir).
+// Resolve em runtime pelo formato real, não pela suposição.
+function resolveApi(ns: any) {
+  const cands = [ns, ns?.default, ns?.default?.default];
+  for (const c of cands) {
+    if (c && typeof c.setContentDOMNode === "function" && typeof c.connectToSocket === "function") {
+      return c as {
+        setContentDOMNode(node: HTMLElement | null): unknown;
+        connectToSocket(socket: unknown): { close(): void };
+      };
+    }
+  }
+  throw new Error("[devtools] react-devtools-core/standalone API not found");
+}
+
+const DevtoolsUI = resolveApi(StandaloneNS as any);
 
 DevtoolsUI.setContentDOMNode(document.getElementById("devtools")!);
 DevtoolsUI.connectToSocket(new ParentBridgeSocket() as unknown as WebSocket);

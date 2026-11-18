@@ -108,7 +108,10 @@ async fn handle_client(
             },
             maybe_in = source.next() => match maybe_in {
                 Some(Ok(Message::Text(text))) => {
-                    println!("[devbridge] {name} frame from {client_id}: {} bytes", text.len());
+                    // Log resumido: tipo da mensagem + pista (name/storage/id/level).
+                    // Não loga o corpo (pode ser snapshot gigante).
+                    let summary = message_summary(&text);
+                    println!("[devbridge] {name} frame from {client_id}: {} bytes [{summary}]", text.len());
                     emit_event(&app, &format!("{name}-message"), RelayEvent {
                         client_id: client_id.clone(),
                         text: text.to_string(),
@@ -155,4 +158,40 @@ pub fn ws_send_to(registry: State<'_, ServerRegistry>, server: String, client_id
 #[tauri::command]
 pub fn get_local_ip() -> Option<String> {
     local_ip_address::local_ip().ok().map(|ip| ip.to_string())
+}
+
+/// Quais servidores WS estão ouvindo agora ("sdk" e/ou "devtools").
+/// Evita a race: eventos `-server-ready` disparam antes da webview existir.
+#[tauri::command]
+pub fn get_servers_ready(registry: State<'_, ServerRegistry>) -> Vec<String> {
+    registry
+        .inner
+        .lock()
+        .unwrap()
+        .keys()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// Resumo de 1 linha para log: "log:error" | "hello" | "devtools" | ...
+fn message_summary(text: &str) -> String {
+    let v: serde_json::Value = match serde_json::from_str(text) {
+        Ok(v) => v,
+        Err(_) => return "non-json".to_string(),
+    };
+    let t = v.get("type").and_then(|t| t.as_str()).unwrap_or("?");
+    let detail = match t {
+        "log" => v.get("level").and_then(|l| l.as_str()).unwrap_or("?").to_string(),
+        "hello" => format!("app={} rdt={}",
+            v.pointer("/app/name").and_then(|n| n.as_str()).unwrap_or("?"),
+            v.pointer("/app/reactDevTools").and_then(|f| f.as_bool()).unwrap_or(false)),
+        "state.snapshot" => v.get("name").and_then(|n| n.as_str()).unwrap_or("?").to_string(),
+        "storage.snapshot" | "storage.write" | "storage.read" | "storage.delete" | "storage.clear" =>
+            v.get("storage").and_then(|s| s.as_str()).unwrap_or("?").to_string(),
+        "network.req" | "network.res" => format!("{} {}",
+            v.get("method").and_then(|m| m.as_str()).unwrap_or("?"),
+            v.get("status").map(|s| s.to_string()).unwrap_or_default()),
+        _ => String::new(),
+    };
+    if detail.is_empty() { t.to_string() } else { format!("{t}:{detail}") }
 }
