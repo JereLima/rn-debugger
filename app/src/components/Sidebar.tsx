@@ -9,7 +9,7 @@ const TABS: { id: TabId; label: string; icon: any; enabled: boolean }[] = [
   { id: "network", label: "Network", icon: Globe, enabled: true },
   { id: "state", label: "State", icon: Database, enabled: true },
   { id: "storage", label: "Storage", icon: HardDrive, enabled: true },
-  { id: "devtools", label: "React DevTools", icon: Bug, enabled: false },
+  { id: "devtools", label: "React DevTools", icon: Bug, enabled: true },
 ];
 
 export function Sidebar({

@@ -16,7 +16,7 @@ pub fn run() {
         .setup(move |app| {
             let servers: Vec<(&'static str, u16)> = vec![
                 ("sdk", 9090),
-                // M4: ("devtools", 8097),
+                ("devtools", 8097),
             ];
             for (name, port) in servers {
                 let handle = app.handle().clone();
