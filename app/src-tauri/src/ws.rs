@@ -40,6 +40,12 @@ struct ServerReadyEvent {
     port: u16,
 }
 
+fn emit_event(app: &AppHandle, event: &str, payload: impl serde::Serialize + Clone) {
+    if let Err(e) = app.emit(event, payload) {
+        eprintln!("[devbridge] emit {event} failed: {e:?}");
+    }
+}
+
 /// Inicia servidor WS que aceita múltiplos clientes e repassa frames.
 /// Cada frame recebido vira evento Tauri `{name}-message` com { clientId, text }.
 /// Frames enviados aos clientes chegam via `ws_broadcast` / `ws_send_to`.
@@ -52,11 +58,11 @@ pub async fn start_server(
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
         Err(e) => {
-            let _ = app.emit(&format!("{name}-server-error"), ServerErrorEvent { error: e.to_string() });
+            emit_event(&app, &format!("{name}-server-error"), ServerErrorEvent { error: e.to_string() });
             return Err(e.into());
         }
     };
-    let _ = app.emit(&format!("{name}-server-ready"), ServerReadyEvent { port });
+    emit_event(&app, &format!("{name}-server-ready"), ServerReadyEvent { port });
     println!("[devbridge] {name} server listening on 0.0.0.0:{port}");
 
     let clients: SharedClients = Arc::new(Mutex::new(HashMap::new()));
@@ -90,7 +96,7 @@ async fn handle_client(
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     clients.lock().unwrap().insert(client_id.clone(), tx);
 
-    let _ = app.emit(&format!("{name}-client-connected"), ClientEvent { client_id: client_id.clone() });
+    emit_event(&app, &format!("{name}-client-connected"), ClientEvent { client_id: client_id.clone() });
     println!("[devbridge] {name} client connected: {client_id}");
 
     let mut close_reason: Option<anyhow::Error> = None;
@@ -103,7 +109,7 @@ async fn handle_client(
             maybe_in = source.next() => match maybe_in {
                 Some(Ok(Message::Text(text))) => {
                     println!("[devbridge] {name} frame from {client_id}: {} bytes", text.len());
-                    let _ = app.emit(&format!("{name}-message"), RelayEvent {
+                    emit_event(&app, &format!("{name}-message"), RelayEvent {
                         client_id: client_id.clone(),
                         text: text.to_string(),
                     });
@@ -118,7 +124,7 @@ async fn handle_client(
 
     clients.lock().unwrap().remove(&client_id);
     println!("[devbridge] {name} client disconnected: {client_id}");
-    let _ = app.emit(&format!("{name}-client-disconnected"), ClientEvent { client_id });
+    emit_event(&app, &format!("{name}-client-disconnected"), ClientEvent { client_id });
     let _ = sink.send(Message::Close(None)).await;
     if let Some(e) = close_reason { return Err(e); }
     Ok(())
