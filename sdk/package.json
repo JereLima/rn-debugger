@@ -1,0 +1,30 @@
+{
+  "name": "devbridge",
+  "version": "0.1.0",
+  "description": "Zero-config debugger for React Native and Expo apps",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.mjs", "require": "./dist/index.js" },
+    "./expo": { "types": "./dist/expo.d.ts", "import": "./dist/expo.mjs", "require": "./dist/expo.js" }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "example:sync": "cd ../example && npm install ../sdk"
+  },
+  "peerDependencies": {
+    "expo-constants": "*",
+    "@react-native-async-storage/async-storage": "*",
+    "react-native-mmkv": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-constants": { "optional": true },
+    "@react-native-async-storage/async-storage": { "optional": true },
+    "react-native-mmkv": { "optional": true }
+  },
+  "devDependencies": { "tsup": "^8", "typescript": "^5", "@types/react-native": "*" }
+}
