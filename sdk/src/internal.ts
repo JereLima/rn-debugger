@@ -3,20 +3,20 @@ import { Connector } from "./connector";
 import { patchConsole } from "./console";
 import { patchFetch, patchNetwork, shouldIgnore } from "./network";
 import { patchAsyncStorage, patchMMKV } from "./storage";
+import { dispatchDeviceCommand, onDeviceCommand } from "./commands";
+import { enableReactDevToolsViaSdk } from "./devtools";
 
 export interface AddDebugOptions {
   /** Host explícito, ex.: "192.168.1.5". Sobrepõe descoberta automática. */
   host?: string;
   /** Porta do DevBridge (default 9090). */
   port?: number;
+  /** Multiplexa o React DevTools sobre o canal SDK (Expo Go / RN sem 8097). */
+  reactDevTools?: boolean;
 }
 
 let started = false;
 let connector: Connector | null = null;
-
-// Comandos desktop→device (M3.3: storage.get; M4.5: devtools.res)
-let deviceCommandHandler: ((msg: any) => void) | null = null;
-export function onDeviceCommand(fn: (msg: any) => void) { deviceCommandHandler = fn; }
 
 export function getConnector(): Connector | null { return connector; }
 export function isDebugging(): boolean { return !!connector?.isConnected; }
@@ -43,7 +43,7 @@ export function debugMMKVInternal(instance: any, name = "mmkv") {
   } catch { /* nunca quebrar o app do usuário */ }
 }
 
-// Comandos desktop→device (chegam pelo onMessage do Connector):
+// Comandos desktop→device (chegam pelo dispatch central do Connector):
 onDeviceCommand((msg) => {
   try {
     if (msg?.type === "storage.get") storageRefreshers.get(String(msg.storage))?.();
@@ -71,7 +71,7 @@ export function addDebugInternal(
   const port = options.port ?? 9090;
   connector = new Connector(
     port,
-    (msg) => { try { deviceCommandHandler?.(msg); } catch { /* ignore */ } },
+    (msg) => { dispatchDeviceCommand(msg); },
     () => { /* status interno; sem UI no device */ },
   );
   connector.start(buildCandidates(options.host, extras.devHost));
@@ -84,8 +84,12 @@ export function addDebugInternal(
       platformVersion: String((Platform as any).Version ?? ""),
       ...(extras.deviceInfo ?? {}),
     },
-    app: { name: extras.appName ?? "" },
+    app: { name: extras.appName ?? "", ...(options.reactDevTools ? { reactDevTools: true } : {}) },
   });
+
+  if (options.reactDevTools) {
+    try { enableReactDevToolsViaSdk(connector); } catch { /* nunca quebrar o app do usuário */ }
+  }
 
   patchConsole((msg) => { try { connector?.send(msg); } catch { /* ignore */ } });
   patchNetwork((msg) => { try { connector?.send(msg); } catch { /* ignore */ } }, shouldIgnore);

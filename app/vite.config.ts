@@ -25,6 +25,7 @@ export default defineConfig({
       crypto: resolve(__dirname, "src/devtools/node-stubs/empty.ts"),
       zlib: resolve(__dirname, "src/devtools/node-stubs/empty.ts"),
       stream: resolve(__dirname, "src/devtools/node-stubs/empty.ts"),
+      url: resolve(__dirname, "src/devtools/node-stubs/url.ts"),
       os: resolve(__dirname, "src/devtools/node-stubs/empty.ts"),
       util: resolve(__dirname, "src/devtools/node-stubs/empty.ts"),
     },

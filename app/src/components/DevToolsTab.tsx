@@ -1,19 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { useStore } from "../store";
 
 /**
- * Aba React DevTools (M4.3): iframe isolado com o frontend oficial
- * (react-devtools-core/standalone). Relay dupla-mão:
- *   iframe --postMessage--> janela --invoke--> Rust:8097 --> app RN
- *   app RN --> Rust:8097 --devtools-message--> janela --postMessage--> iframe
+ * Aba React DevTools (M4.3 + M4.5): iframe isolado com o frontend oficial
+ * (react-devtools-core/standalone). Dois caminhos de relay:
+ *   M4.5 (multiplex via SDK/9090): device --devtools--> inbox (store) --postMessage--> iframe;
+ *     iframe --postMessage--> ws_send_to(sdk, devtoolsClientId) --> device (devtools.res).
+ *   Legado (M4.1–M4.4, direto na 8097): device --devtools-message--> iframe;
+ *     iframe --postMessage--> ws_broadcast(devtools) --> device.
  */
 export function DevToolsTab() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeReady, setIframeReady] = useState(false);
-  const [clientId, setClientId] = useState<string | null>(null);
-  const stateRef = useRef({ iframeReady: false, clientId: null as string | null });
-  stateRef.current = { iframeReady, clientId };
+  const [directClientId, setDirectClientId] = useState<string | null>(null);
+
+  // M4.5
+  const devtoolsClientId = useStore((s) => s.devtoolsClientId);
+  const inbox = useStore((s) => s.devtoolsInbox);
+  const lastSentSeq = useRef(0);
+
+  // Encaminha frames novos do inbox (via SDK) para o iframe.
+  // Só após o iframe pronto; o inbox acumula (cap 200) até lá.
+  useEffect(() => {
+    if (!iframeReady) return;
+    const fresh = inbox.filter((f) => f.seq > lastSentSeq.current);
+    if (fresh.length === 0) return;
+    lastSentSeq.current = fresh[fresh.length - 1].seq;
+    for (const f of fresh) {
+      try {
+        iframeRef.current?.contentWindow?.postMessage({ type: "devbridge-devtools-in", text: f.text }, "*");
+      } catch { /* janela indisponível: descarta (inbox mantém cap 200) */ }
+    }
+  }, [inbox, iframeReady]);
+
+  const stateRef = useRef({ iframeReady: false, directClientId: null as string | null });
+  stateRef.current = { iframeReady, directClientId };
 
   useEffect(() => {
     let cancelled = false;
@@ -25,32 +48,43 @@ export function DevToolsTab() {
       } catch { /* iframe ainda não carregou */ }
     };
 
+    const sendOut = (text: string) => {
+      // M4.5 primeiro: resposta direta ao device multiplexado.
+      const target = useStore.getState().devtoolsClientId;
+      if (target) {
+        invoke("ws_send_to", { server: "sdk", clientId: target, text }).catch(() => { /* ignore */ });
+      } else {
+        // Legado: broadcast na 8097.
+        invoke("ws_broadcast", { server: "devtools", text }).catch(() => { /* ignore */ });
+      }
+    };
+
     const onWindowMessage = (ev: MessageEvent) => {
       if (cancelled) return;
       const data = ev.data;
       if (data?.type === "devbridge-devtools-ready") {
         setIframeReady(true);
-        // Se o app já estava conectado, avisa o iframe imediatamente.
-        if (stateRef.current.clientId) {
+        if (stateRef.current.directClientId) {
           postToIframe({ type: "devbridge-devtools-status", status: "connected" });
         }
       } else if (data?.type === "devbridge-devtools-out") {
-        // Frame do frontend → app RN via servidor 8097.
-        invoke("ws_broadcast", { server: "devtools", text: String(data.text) }).catch(() => { /* ignore */ });
+        sendOut(String(data.text));
       }
     };
     window.addEventListener("message", onWindowMessage);
 
     (async () => {
       try {
+        // M4.5: frames via SDK chegam pelo inbox (store) — nada a ouvir aqui.
+        // Legado: conexão direta na 8097.
         unlistens.push(await listen<{ clientId: string }>("devtools-client-connected", (e) => {
           if (cancelled) return;
-          setClientId(e.payload.clientId);
+          setDirectClientId(e.payload.clientId);
           postToIframe({ type: "devbridge-devtools-status", status: "connected" });
         }));
         unlistens.push(await listen<{ clientId: string }>("devtools-client-disconnected", () => {
           if (cancelled) return;
-          setClientId(null);
+          setDirectClientId(null);
           postToIframe({ type: "devbridge-devtools-status", status: "close" });
         }));
         unlistens.push(await listen<{ clientId: string; text: string }>("devtools-message", (e) => {
@@ -58,7 +92,7 @@ export function DevToolsTab() {
           postToIframe({ type: "devbridge-devtools-in", text: e.payload.text });
         }));
       } catch {
-        // Tauri indisponível (ex.: preview no browser puro): aba mostra o header explicativo.
+        // Tauri indisponível (ex.: preview no browser puro): header explicativo.
       }
     })();
 
@@ -69,14 +103,16 @@ export function DevToolsTab() {
     };
   }, []);
 
+  const connectedLabel = devtoolsClientId
+    ? <>device (multiplex SDK): <span className="text-emerald-400">{devtoolsClientId.slice(0, 8)}…</span></>
+    : directClientId
+      ? <>device: <span className="text-emerald-400">{directClientId.slice(0, 8)}…</span> conectado na 8097</>
+      : <>Aguardando app (simulator conecta sozinho; Android físico: adb reverse tcp:8097 tcp:8097; Expo Go: addDebug({"{"} reactDevTools: true {"}"}))</>;
+
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-zinc-800 px-3 py-2 text-xs text-zinc-400">
-        {clientId ? (
-          <span className="font-mono">device: <span className="text-emerald-400">{clientId.slice(0, 8)}…</span> conectado na 8097</span>
-        ) : (
-          <span>Aguardando app (simulator conecta sozinho; Android físico: adb reverse tcp:8097 tcp:8097)</span>
-        )}
+      <div className="border-b border-zinc-800 px-3 py-2 font-mono text-xs text-zinc-400">
+        {connectedLabel}
       </div>
       <iframe
         ref={iframeRef}

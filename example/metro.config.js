@@ -10,6 +10,7 @@ config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules || {}),
   "react-native": path.resolve(__dirname, "node_modules/react-native"),
   "expo-constants": path.resolve(__dirname, "node_modules/expo-constants"),
+  "react-devtools-core": path.resolve(__dirname, "node_modules/react-devtools-core"),
 };
 
 module.exports = config;

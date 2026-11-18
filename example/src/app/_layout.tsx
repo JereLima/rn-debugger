@@ -1,7 +1,7 @@
 import { addDebug, debugAsyncStorage } from "devbridge/expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-addDebug(); // PRIMEIRA linha — antes de tudo
+addDebug({ reactDevTools: true }); // PRIMEIRA linha — antes de tudo
 debugAsyncStorage(AsyncStorage);
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';

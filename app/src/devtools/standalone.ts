@@ -1,5 +1,6 @@
 // Roda DENTRO do iframe. Comunica-se com a janela principal via postMessage;
 // a janela principal faz o invoke() no Tauri.
+import "./polyfills";
 import DevtoolsUI from "react-devtools-core/standalone";
 
 // WebSocket falso: o que o frontend envia vai pro parent; o que chega do parent

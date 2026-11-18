@@ -44,6 +44,8 @@ export interface StorageEventItem {
   storage: string; key?: string; value?: unknown;
 }
 
+export interface DevtoolsFrame { seq: number; text: string }
+
 const MAX_LOGS = 5000;
 const MAX_NETWORK = 1000;
 
@@ -60,6 +62,8 @@ interface Store {
   storages: Record<string, StorageData>;
   storageEvents: StorageEventItem[];
   selectedStorage: string | null;
+  devtoolsClientId: string | null;
+  devtoolsInbox: DevtoolsFrame[];
 
   setServerReady(v: boolean): void;
   setServerError(e: string | null): void;
@@ -77,6 +81,9 @@ interface Store {
   addStorageEvent(msg: any): void;
   clearStorageEvents(): void;
   selectStorage(name: string | null): void;
+  setDevtoolsClient(clientId: string | null): void;
+  pushDevtoolsFrame(text: string): void;
+  clearDevtoolsInbox(): void;
 }
 
 export const useStore = create<Store>((set) => ({
@@ -105,12 +112,20 @@ export const useStore = create<Store>((set) => ({
     set((s) => {
       const clients = { ...s.clients };
       delete clients[clientId];
-      return { clients };
+      return {
+        clients,
+        devtoolsClientId: s.devtoolsClientId === clientId ? null : s.devtoolsClientId,
+      };
     }),
   setHello: (clientId, hello) =>
     set((s) => {
       const prev = s.clients[clientId] ?? { clientId, connectedAt: Date.now() };
-      return { clients: { ...s.clients, [clientId]: { ...prev, hello } } };
+      const next = { clients: { ...s.clients, [clientId]: { ...prev, hello } } };
+      // M4.5: device com multiplex DevTools via canal SDK.
+      if (hello?.app?.reactDevTools === true) {
+        return { ...next, devtoolsClientId: clientId };
+      }
+      return next;
     }),
   addLog: (clientId, msg) =>
     set((s) => {
@@ -195,4 +210,13 @@ export const useStore = create<Store>((set) => ({
     }),
   clearStorageEvents: () => set({ storageEvents: [] }),
   selectStorage: (name) => set({ selectedStorage: name }),
+  devtoolsClientId: null,
+  devtoolsInbox: [],
+  setDevtoolsClient: (clientId) => set({ devtoolsClientId: clientId }),
+  pushDevtoolsFrame: (text) =>
+    set((s) => {
+      const devtoolsInbox = [...s.devtoolsInbox, { seq: nextId++, text }];
+      return { devtoolsInbox: devtoolsInbox.length > 200 ? devtoolsInbox.slice(-200) : devtoolsInbox };
+    }),
+  clearDevtoolsInbox: () => set({ devtoolsInbox: [] }),
 }));
