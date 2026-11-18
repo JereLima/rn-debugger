@@ -91,6 +91,7 @@ async fn handle_client(
     clients.lock().unwrap().insert(client_id.clone(), tx);
 
     let _ = app.emit(&format!("{name}-client-connected"), ClientEvent { client_id: client_id.clone() });
+    println!("[devbridge] {name} client connected: {client_id}");
 
     let mut close_reason: Option<anyhow::Error> = None;
     loop {
@@ -101,6 +102,7 @@ async fn handle_client(
             },
             maybe_in = source.next() => match maybe_in {
                 Some(Ok(Message::Text(text))) => {
+                    println!("[devbridge] {name} frame from {client_id}: {} bytes", text.len());
                     let _ = app.emit(&format!("{name}-message"), RelayEvent {
                         client_id: client_id.clone(),
                         text: text.to_string(),
@@ -115,6 +117,7 @@ async fn handle_client(
     }
 
     clients.lock().unwrap().remove(&client_id);
+    println!("[devbridge] {name} client disconnected: {client_id}");
     let _ = app.emit(&format!("{name}-client-disconnected"), ClientEvent { client_id });
     let _ = sink.send(Message::Close(None)).await;
     if let Some(e) = close_reason { return Err(e); }

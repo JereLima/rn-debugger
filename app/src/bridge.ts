@@ -7,6 +7,17 @@ let started = false;
 export async function initBridge() {
   if (started) return; // StrictMode/HMR remontam o App em dev — listeners duplicariam eventos
   started = true;
+  try {
+    await doInitBridge();
+  } catch (e) {
+    // Falha transitória (ex.: primeiro boot): permite retry no próximo mount/HMR
+    // em vez de deixar a ponte permanentemente surda.
+    started = false;
+    console.error("[devbridge] initBridge failed:", e);
+  }
+}
+
+async function doInitBridge() {
   const s = useStore.getState();
 
   await listen<{ port: number }>("sdk-server-ready", () => s.setServerReady(true));
