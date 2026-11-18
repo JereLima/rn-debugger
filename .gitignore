@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.expo/
+*.log
+.DS_Store
+app/src-tauri/target/
+app/dist/
+sdk/dist/
+example/.expo/
+example/ios/
+example/android/

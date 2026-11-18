@@ -1,0 +1,6 @@
+packages:
+  - app
+  - sdk
+  - example
+allowBuilds:
+  esbuild: true

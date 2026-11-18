@@ -1,0 +1,9 @@
+{
+  "name": "devbridge-monorepo",
+  "private": true,
+  "scripts": {
+    "app": "pnpm --filter app tauri dev",
+    "sdk": "pnpm --filter devbridge dev",
+    "example": "pnpm --filter example start"
+  }
+}
