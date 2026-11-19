@@ -3,6 +3,7 @@ import { Connector } from "./connector";
 import { patchConsole } from "./console";
 import { patchFetch, patchNetwork, shouldIgnore } from "./network";
 import { patchAsyncStorage, patchMMKV } from "./storage";
+import { patchFirestore } from "./firestore";
 import { dispatchDeviceCommand, onDeviceCommand } from "./commands";
 import { enableReactDevToolsViaSdk } from "./devtools";
 
@@ -40,6 +41,14 @@ export function debugMMKVInternal(instance: any, name = "mmkv") {
   try {
     const refresh = patchMMKV((m) => { try { connector?.send(m); } catch { /* ignore */ } }, instance, name);
     storageRefreshers.set(id, refresh);
+  } catch { /* nunca quebrar o app do usuário */ }
+}
+
+export function debugFirestoreInternal(api: any, db: any, options: any = {}) {
+  if (!connector || !api) return;
+  try {
+    // patchFirestore é idempotente por módulo (api.__dbFirestore).
+    patchFirestore((m) => { try { connector?.send(m); } catch { /* ignore */ } }, api, db, options);
   } catch { /* nunca quebrar o app do usuário */ }
 }
 

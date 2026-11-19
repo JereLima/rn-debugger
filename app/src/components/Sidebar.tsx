@@ -1,14 +1,15 @@
-import { TerminalSquare, Globe, Database, HardDrive, Bug } from "lucide-react";
+import { TerminalSquare, Globe, Database, HardDrive, Bug, Flame } from "lucide-react";
 import { useStore } from "../store";
 import { StatusCard } from "./StatusCard";
 
-export type TabId = "console" | "network" | "state" | "storage" | "devtools";
+export type TabId = "console" | "network" | "state" | "storage" | "firestore" | "devtools";
 
 const TABS: { id: TabId; label: string; icon: any; enabled: boolean }[] = [
   { id: "console", label: "Console", icon: TerminalSquare, enabled: true },
   { id: "network", label: "Network", icon: Globe, enabled: true },
   { id: "state", label: "State", icon: Database, enabled: true },
   { id: "storage", label: "Storage", icon: HardDrive, enabled: true },
+  { id: "firestore", label: "Firestore", icon: Flame, enabled: true },
   { id: "devtools", label: "React DevTools", icon: Bug, enabled: true },
 ];
 

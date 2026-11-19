@@ -5,6 +5,7 @@ import { ConsoleTab } from "./components/ConsoleTab";
 import { NetworkTab } from "./components/NetworkTab";
 import { StateTab } from "./components/StateTab";
 import { StorageTab } from "./components/StorageTab";
+import { FirestoreTab } from "./components/FirestoreTab";
 import { DevToolsTab } from "./components/DevToolsTab";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
         {tab === "network" && <NetworkTab />}
         {tab === "state" && <StateTab />}
         {tab === "storage" && <StorageTab />}
+        {tab === "firestore" && <FirestoreTab />}
         {tab === "devtools" && <DevToolsTab />}
       </main>
     </div>

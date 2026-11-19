@@ -1,7 +1,7 @@
 /// <reference path="./vendor.d.ts" />
 import Constants from "expo-constants";
 import { addDebugInternal, sendRaw, type AddDebugOptions } from "./internal";
-import { debugAsyncStorageInternal, debugMMKVInternal } from "./internal";
+import { debugAsyncStorageInternal, debugMMKVInternal, debugFirestoreInternal } from "./internal";
 import { debugState as ds, debugRedux as dr, debugZustand as dz } from "./state";
 
 export type { AddDebugOptions };
@@ -27,3 +27,4 @@ export const debugRedux = (store: any, name?: string) => dr(sendRaw, store, name
 export const debugZustand = (store: any, name?: string) => dz(sendRaw, store, name);
 export function debugAsyncStorage(AsyncStorage: unknown) { debugAsyncStorageInternal(AsyncStorage); }
 export function debugMMKV(instance: unknown, name?: string) { debugMMKVInternal(instance, name); }
+export function debugFirestore(api: unknown, db: unknown, options?: { log?: boolean }) { debugFirestoreInternal(api, db, options); }

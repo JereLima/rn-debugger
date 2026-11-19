@@ -46,6 +46,17 @@ export interface StorageEventItem {
 
 export interface DevtoolsFrame { seq: number; text: string }
 
+export interface FsOpEvent {
+  id: number; ts: number;
+  op: "read" | "write" | "delete";
+  n: number; path: string; detail?: string;
+}
+
+export interface FsSession {
+  reads: number; writes: number; deletes: number;
+  startedAt: number; events: FsOpEvent[];
+}
+
 const MAX_LOGS = 5000;
 const MAX_NETWORK = 1000;
 
@@ -64,6 +75,7 @@ interface Store {
   selectedStorage: string | null;
   devtoolsClientId: string | null;
   devtoolsInbox: DevtoolsFrame[];
+  fs: FsSession;
 
   setServerReady(v: boolean): void;
   setServerError(e: string | null): void;
@@ -84,6 +96,8 @@ interface Store {
   setDevtoolsClient(clientId: string | null): void;
   pushDevtoolsFrame(text: string): void;
   clearDevtoolsInbox(): void;
+  addFsOp(msg: any): void;
+  resetFsSession(): void;
 }
 
 export const useStore = create<Store>((set) => ({
@@ -210,8 +224,32 @@ export const useStore = create<Store>((set) => ({
     }),
   clearStorageEvents: () => set({ storageEvents: [] }),
   selectStorage: (name) => set({ selectedStorage: name }),
+
   devtoolsClientId: null,
   devtoolsInbox: [],
+
+  fs: { reads: 0, writes: 0, deletes: 0, startedAt: Date.now(), events: [] },
+
+  addFsOp: (msg) =>
+    set((s) => {
+      const op = msg.op === "write" || msg.op === "delete" ? msg.op : "read";
+      const n = Number.isFinite(msg.n) ? Number(msg.n) : 0;
+      const events = [...s.fs.events, {
+        id: nextId++, ts: msg.ts ?? Date.now(), op, n,
+        path: String(msg.path ?? "?"), detail: msg.detail,
+      }];
+      return {
+        fs: {
+          reads: s.fs.reads + (op === "read" ? n : 0),
+          writes: s.fs.writes + (op === "write" ? n : 0),
+          deletes: s.fs.deletes + (op === "delete" ? n : 0),
+          startedAt: s.fs.startedAt,
+          events: events.length > 500 ? events.slice(-500) : events,
+        },
+      };
+    }),
+  resetFsSession: () => set({ fs: { reads: 0, writes: 0, deletes: 0, startedAt: Date.now(), events: [] } }),
+
   setDevtoolsClient: (clientId) => set({ devtoolsClientId: clientId }),
   pushDevtoolsFrame: (text) =>
     set((s) => {

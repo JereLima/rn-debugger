@@ -41,6 +41,7 @@ async function doInitBridge() {
       case "storage.write":
       case "storage.delete":
       case "storage.clear": s.addStorageEvent(msg); break;
+      case "fs.op": s.addFsOp(msg); break;
       case "devtools": s.pushDevtoolsFrame(String(msg.text ?? "")); break;
       // M4.2 direto na 8097 tratado pelos eventos devtools-* (DevToolsTab)
     }
