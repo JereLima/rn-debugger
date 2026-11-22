@@ -106,6 +106,18 @@ debugZustand(useUi, "ui");
 
 Names must be unique (the default is `"zustand"`, so unnamed calls collide). It's cheap: snapshots are throttled and only sent when state actually changes.
 
+Many stores? A tiny batch helper registers them all in one call:
+
+```ts
+import { debugZustand } from "rn-debugger/expo";
+
+export function debugStores(stores: Record<string, unknown>) {
+  for (const [name, store] of Object.entries(stores)) debugZustand(store, name);
+}
+
+debugStores({ cart: useCart, user: useUser, ui: useUi });
+```
+
 ### How it connects
 
 Device not connecting? Windows firewall, `--tunnel` mode, port conflicts and more in [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -214,6 +226,18 @@ debugZustand(useUi, "ui");
 ```
 
 Os nomes precisam ser únicos (o default é `"zustand"`, então chamadas sem nome colidem). É barato: snapshots passam por throttle e só são enviados quando o state muda de fato.
+
+Muitas stores? Um helper de 3 linhas registra tudo de uma vez:
+
+```ts
+import { debugZustand } from "rn-debugger/expo";
+
+export function debugStores(stores: Record<string, unknown>) {
+  for (const [name, store] of Object.entries(stores)) debugZustand(store, name);
+}
+
+debugStores({ cart: useCart, user: useUser, ui: useUi });
+```
 
 ### Problemas comuns
 
