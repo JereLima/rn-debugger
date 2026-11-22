@@ -1,6 +1,7 @@
 {
   "name": "rn-debugger-monorepo",
   "private": true,
+  "packageManager": "pnpm@12.21.0",
   "scripts": {
     "app": "pnpm --filter app tauri dev",
     "sdk": "pnpm --filter rn-debugger dev",
