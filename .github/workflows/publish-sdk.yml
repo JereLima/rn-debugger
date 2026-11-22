@@ -1,0 +1,19 @@
+name: publish-sdk
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC para trusted publishing + provenance
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter rn-debugger build
+      - run: npm install -g npm@latest   # trusted publishing exige npm >= 11.5
+      - run: npm publish ./sdk --provenance --access public

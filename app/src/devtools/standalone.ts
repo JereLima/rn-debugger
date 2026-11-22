@@ -17,13 +17,13 @@ class ParentBridgeSocket {
   constructor() {
     window.addEventListener("message", (ev: MessageEvent) => {
       const data = ev.data;
-      if (data?.type === "devbridge-devtools-in") {
+      if (data?.type === "rndebugger-devtools-in") {
         this.dispatch("message", { data: data.text });
-      } else if (data?.type === "devbridge-devtools-status") {
+      } else if (data?.type === "rndebugger-devtools-status") {
         this.dispatch(data.status === "connected" ? "open" : "close", {});
       }
     });
-    window.parent?.postMessage({ type: "devbridge-devtools-ready" }, "*");
+    window.parent?.postMessage({ type: "rndebugger-devtools-ready" }, "*");
   }
 
   addEventListener(type: string, cb: (ev: any) => void) {
@@ -36,7 +36,7 @@ class ParentBridgeSocket {
   dispatch(type: string, ev: any) { this.listeners.get(type)?.forEach((cb) => cb(ev)); }
 
   send(text: string) {
-    window.parent?.postMessage({ type: "devbridge-devtools-out", text }, "*");
+    window.parent?.postMessage({ type: "rndebugger-devtools-out", text }, "*");
   }
   close() { /* lifecycle controlado pelo parent */ }
 }

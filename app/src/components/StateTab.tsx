@@ -4,7 +4,7 @@ import { useStore } from "../store";
 import { diffPaths } from "../diff";
 
 const JSON_THEME = {
-  scheme: "devbridge",
+  scheme: "rndebugger",
   base00: "transparent",
   base01: "#3f3f46",
   base02: "#52525b",

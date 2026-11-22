@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { debugZustand } from "devbridge/expo";
+import { debugZustand } from "rn-debugger/expo";
 
 interface State {
   count: number;
@@ -36,7 +36,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.c}>
-      <Text style={styles.h1}>DevBridge Playground</Text>
+      <Text style={styles.h1}>rn-debugger playground</Text>
       <Text style={styles.counter}>count: {count} · city: {city}</Text>
       <Btn label="increment" onPress={inc} />
       <Btn label="mudar cidade" onPress={() => setCity(city === "São Paulo" ? "Recife" : "São Paulo")} />
@@ -53,7 +53,7 @@ export default function HomeScreen() {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ x: 1 }) })} />
       <Btn label="fetch 404" onPress={() => fetch("https://jsonplaceholder.typicode.com/nope")} />
       <Btn label='AsyncStorage.setItem("@user", json)'
-        onPress={() => AsyncStorage.setItem("@user", JSON.stringify({ name: "DevBridge", tags: ["a", "b"] }))} />
+        onPress={() => AsyncStorage.setItem("@user", JSON.stringify({ name: "rn-debugger", tags: ["a", "b"] }))} />
       <Btn label='AsyncStorage.removeItem("@user")' onPress={() => AsyncStorage.removeItem("@user")} />
       <Btn label="AsyncStorage.multiSet" onPress={() => AsyncStorage.multiSet([["@a", "1"], ["@b", "2"]])} />
       <Btn label="AsyncStorage.clear" onPress={() => AsyncStorage.clear()} />

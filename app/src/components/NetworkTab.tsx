@@ -10,7 +10,7 @@ const STATUS_GROUPS = ["2xx", "3xx", "4xx", "5xx", "error"] as const;
 type StatusGroup = (typeof STATUS_GROUPS)[number];
 
 const JSON_THEME = {
-  scheme: "devbridge",
+  scheme: "rndebugger",
   base00: "transparent",
   base01: "#3f3f46",
   base02: "#52525b",

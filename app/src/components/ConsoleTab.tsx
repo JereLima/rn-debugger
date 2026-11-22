@@ -16,7 +16,7 @@ const LEVEL_STYLE: Record<Level, string> = {
 };
 
 const JSON_THEME = {
-  scheme: "devbridge",
+  scheme: "rndebugger",
   base00: "transparent",
   base01: "#3f3f46",
   base02: "#52525b",

@@ -30,7 +30,7 @@ export function DevToolsTab() {
     lastSentSeq.current = fresh[fresh.length - 1].seq;
     for (const f of fresh) {
       try {
-        iframeRef.current?.contentWindow?.postMessage({ type: "devbridge-devtools-in", text: f.text }, "*");
+        iframeRef.current?.contentWindow?.postMessage({ type: "rndebugger-devtools-in", text: f.text }, "*");
       } catch { /* janela indisponível: descarta (inbox mantém cap 200) */ }
     }
   }, [inbox, iframeReady]);
@@ -62,12 +62,12 @@ export function DevToolsTab() {
     const onWindowMessage = (ev: MessageEvent) => {
       if (cancelled) return;
       const data = ev.data;
-      if (data?.type === "devbridge-devtools-ready") {
+      if (data?.type === "rndebugger-devtools-ready") {
         setIframeReady(true);
         if (stateRef.current.directClientId) {
-          postToIframe({ type: "devbridge-devtools-status", status: "connected" });
+          postToIframe({ type: "rndebugger-devtools-status", status: "connected" });
         }
-      } else if (data?.type === "devbridge-devtools-out") {
+      } else if (data?.type === "rndebugger-devtools-out") {
         sendOut(String(data.text));
       }
     };
@@ -80,16 +80,16 @@ export function DevToolsTab() {
         unlistens.push(await listen<{ clientId: string }>("devtools-client-connected", (e) => {
           if (cancelled) return;
           setDirectClientId(e.payload.clientId);
-          postToIframe({ type: "devbridge-devtools-status", status: "connected" });
+          postToIframe({ type: "rndebugger-devtools-status", status: "connected" });
         }));
         unlistens.push(await listen<{ clientId: string }>("devtools-client-disconnected", () => {
           if (cancelled) return;
           setDirectClientId(null);
-          postToIframe({ type: "devbridge-devtools-status", status: "close" });
+          postToIframe({ type: "rndebugger-devtools-status", status: "close" });
         }));
         unlistens.push(await listen<{ clientId: string; text: string }>("devtools-message", (e) => {
           if (cancelled) return;
-          postToIframe({ type: "devbridge-devtools-in", text: e.payload.text });
+          postToIframe({ type: "rndebugger-devtools-in", text: e.payload.text });
         }));
       } catch {
         // Tauri indisponível (ex.: preview no browser puro): header explicativo.

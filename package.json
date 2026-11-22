@@ -1,9 +1,9 @@
 {
-  "name": "devbridge-monorepo",
+  "name": "rn-debugger-monorepo",
   "private": true,
   "scripts": {
     "app": "pnpm --filter app tauri dev",
-    "sdk": "pnpm --filter devbridge dev",
+    "sdk": "pnpm --filter rn-debugger dev",
     "example": "npm --prefix example start"
   }
 }

@@ -13,7 +13,7 @@ export async function initBridge() {
     // Falha transitória (ex.: primeiro boot): permite retry no próximo mount/HMR
     // em vez de deixar a ponte permanentemente surda.
     started = false;
-    console.error("[devbridge] initBridge failed:", e);
+    console.error("[rn-debugger] initBridge failed:", e);
   }
 }
 

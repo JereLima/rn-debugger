@@ -24,7 +24,7 @@ export function Sidebar({
 
   return (
     <aside className="flex w-60 shrink-0 flex-col gap-3 border-r border-zinc-800 bg-zinc-900 p-3">
-      <h1 className="px-1 text-sm font-bold tracking-wide text-zinc-100">DevBridge</h1>
+      <h1 className="px-1 text-sm font-bold tracking-wide text-zinc-100">rn-debugger</h1>
 
       <StatusCard />
 

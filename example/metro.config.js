@@ -1,4 +1,4 @@
-// O SDK (devbridge, symlink para ../sdk) importa peers nativos
+// O SDK (rn-debugger, symlink para ../sdk) importa peers nativos
 // (react-native, expo-constants) que só existem no node_modules do example.
 // Sem este mapeamento o Metro tenta resolver a partir de sdk/dist e falha.
 const { getDefaultConfig } = require("expo/metro-config");

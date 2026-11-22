@@ -7,7 +7,7 @@ import { useStore } from "../store";
 import { sendToDevice } from "../bridge";
 
 const JSON_THEME = {
-  scheme: "devbridge",
+  scheme: "rndebugger",
   base00: "transparent",
   base01: "#3f3f46",
   base02: "#52525b",

@@ -42,7 +42,7 @@ struct ServerReadyEvent {
 
 fn emit_event(app: &AppHandle, event: &str, payload: impl serde::Serialize + Clone) {
     if let Err(e) = app.emit(event, payload) {
-        eprintln!("[devbridge] emit {event} failed: {e:?}");
+        eprintln!("[rn-debugger] emit {event} failed: {e:?}");
     }
 }
 
@@ -63,7 +63,7 @@ pub async fn start_server(
         }
     };
     emit_event(&app, &format!("{name}-server-ready"), ServerReadyEvent { port });
-    println!("[devbridge] {name} server listening on 0.0.0.0:{port}");
+    println!("[rn-debugger] {name} server listening on 0.0.0.0:{port}");
 
     let clients: SharedClients = Arc::new(Mutex::new(HashMap::new()));
     registry.inner.lock().unwrap().insert(name, clients.clone());
@@ -71,13 +71,13 @@ pub async fn start_server(
     loop {
         let (stream, _addr) = match listener.accept().await {
             Ok(s) => s,
-            Err(e) => { eprintln!("[devbridge] accept error: {e:?}"); continue; }
+            Err(e) => { eprintln!("[rn-debugger] accept error: {e:?}"); continue; }
         };
         let app = app.clone();
         let clients = clients.clone();
         tauri::async_runtime::spawn(async move {
             if let Err(e) = handle_client(app, clients, name, stream).await {
-                eprintln!("[devbridge] client error: {e:?}");
+                eprintln!("[rn-debugger] client error: {e:?}");
             }
         });
     }
@@ -97,7 +97,7 @@ async fn handle_client(
     clients.lock().unwrap().insert(client_id.clone(), tx);
 
     emit_event(&app, &format!("{name}-client-connected"), ClientEvent { client_id: client_id.clone() });
-    println!("[devbridge] {name} client connected: {client_id}");
+    println!("[rn-debugger] {name} client connected: {client_id}");
 
     let mut close_reason: Option<anyhow::Error> = None;
     loop {
@@ -111,7 +111,7 @@ async fn handle_client(
                     // Log resumido: tipo da mensagem + pista (name/storage/id/level).
                     // Não loga o corpo (pode ser snapshot gigante).
                     let summary = message_summary(&text);
-                    println!("[devbridge] {name} frame from {client_id}: {} bytes [{summary}]", text.len());
+                    println!("[rn-debugger] {name} frame from {client_id}: {} bytes [{summary}]", text.len());
                     emit_event(&app, &format!("{name}-message"), RelayEvent {
                         client_id: client_id.clone(),
                         text: text.to_string(),
@@ -126,7 +126,7 @@ async fn handle_client(
     }
 
     clients.lock().unwrap().remove(&client_id);
-    println!("[devbridge] {name} client disconnected: {client_id}");
+    println!("[rn-debugger] {name} client disconnected: {client_id}");
     emit_event(&app, &format!("{name}-client-disconnected"), ClientEvent { client_id });
     let _ = sink.send(Message::Close(None)).await;
     if let Some(e) = close_reason { return Err(e); }

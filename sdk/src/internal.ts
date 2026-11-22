@@ -10,7 +10,7 @@ import { enableReactDevToolsViaSdk } from "./devtools";
 export interface AddDebugOptions {
   /** Host explícito, ex.: "192.168.1.5". Sobrepõe descoberta automática. */
   host?: string;
-  /** Porta do DevBridge (default 9090). */
+  /** Porta do RN Debugger (default 9090). */
   port?: number;
   /** Multiplexa o React DevTools sobre o canal SDK (Expo Go / RN sem 8097). */
   reactDevTools?: boolean;

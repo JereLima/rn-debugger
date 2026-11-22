@@ -1,0 +1,39 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-22.04
+            args: ""
+          - platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf
+        if: matrix.platform == 'ubuntu-22.04'
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "aarch64-apple-darwin,x86_64-apple-darwin" }
+        if: matrix.platform == 'macos-latest'
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: app/src-tauri }
+      - run: pnpm install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: app
+          tagName: v__VERSION__
+          releaseName: "RN Debugger v__VERSION__"
+          releaseBody: "See the assets to download for your OS. macOS builds are unsigned — see README."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

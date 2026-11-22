@@ -4,3 +4,6 @@ packages:
   # example fica FORA do workspace de propósito: usa npm interno
   # (cópia real em node_modules, sem symlinks) para o Metro não quebrar.
   # Ver M3: pnpm reescrevia example/node_modules com symlinks e derrubava o Metro.
+
+allowBuilds:
+  esbuild: true

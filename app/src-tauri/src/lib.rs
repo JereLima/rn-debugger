@@ -26,7 +26,7 @@ pub fn run() {
                     // Se a porta estiver ocupada, tenta de novo a cada 5s.
                     loop {
                         if let Err(e) = ws::start_server(handle.clone(), port, name, reg.clone()).await {
-                            eprintln!("[devbridge] {name} server failed: {e:?} — retrying in 5s");
+                            eprintln!("[rn-debugger] {name} server failed: {e:?} — retrying in 5s");
                             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                         }
                     }
@@ -35,5 +35,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running DevBridge");
+        .expect("error while running RN Debugger");
 }

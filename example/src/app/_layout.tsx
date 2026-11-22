@@ -1,4 +1,4 @@
-import { addDebug, debugAsyncStorage } from "devbridge/expo";
+import { addDebug, debugAsyncStorage } from "rn-debugger/expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 addDebug({ reactDevTools: true }); // PRIMEIRA linha — antes de tudo
