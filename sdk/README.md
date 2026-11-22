@@ -37,6 +37,32 @@ debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
 ```
 
+## Multiple stores
+
+One `debugZustand`/`debugRedux` call per store, each with a unique name. Every name gets its own entry — with its own diff — in the desktop **State** tab.
+
+```ts
+debugZustand(useCart, "cart");
+debugZustand(useUser, "user");
+debugZustand(useUi, "ui");
+```
+
+Names must be unique (the default is `"zustand"`, so unnamed calls collide). Many stores are cheap: snapshots are throttled and only sent when state actually changes.
+
+Optional batch helper for your project:
+
+```ts
+import { debugZustand } from "rn-debugger/expo";
+
+export function debugStores(stores: Record<string, unknown>) {
+  for (const [name, store] of Object.entries(stores)) debugZustand(store, name);
+}
+
+debugStores({ cart: useCart, user: useUser, ui: useUi });
+```
+
+Tip: call `debugZustand` right where each store is created — monitoring travels with the store module, no central setup needed.
+
 Dev-only: no-op in production (`__DEV__ === false`).
 
 Download the desktop app from [GitHub Releases](https://github.com/JereLima/rn-debugger/releases).

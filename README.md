@@ -94,6 +94,18 @@ debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
 ```
 
+### Multiple stores
+
+One call per store, each with a unique name — every store gets its own entry and visual diff in the State tab:
+
+```ts
+debugZustand(useCart, "cart");
+debugZustand(useUser, "user");
+debugZustand(useUi, "ui");
+```
+
+Names must be unique (the default is `"zustand"`, so unnamed calls collide). It's cheap: snapshots are throttled and only sent when state actually changes.
+
 ### How it connects
 
 Device not connecting? Windows firewall, `--tunnel` mode, port conflicts and more in [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -190,6 +202,18 @@ debugZustand(store, name?)
 debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
 ```
+
+### Várias stores
+
+Uma chamada por store, cada uma com um nome único — cada store ganha sua própria entrada e diff visual na aba State:
+
+```ts
+debugZustand(useCart, "cart");
+debugZustand(useUser, "user");
+debugZustand(useUi, "ui");
+```
+
+Os nomes precisam ser únicos (o default é `"zustand"`, então chamadas sem nome colidem). É barato: snapshots passam por throttle e só são enviados quando o state muda de fato.
 
 ### Problemas comuns
 
