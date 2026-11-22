@@ -2,6 +2,8 @@ name: release
 on:
   push:
     tags: ["v*"]
+permissions:
+  contents: write   # tauri-action cria/edita a GitHub Release (draft) e faz upload dos assets
 jobs:
   build:
     strategy:
