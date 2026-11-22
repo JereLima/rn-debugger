@@ -38,6 +38,6 @@ jobs:
           tagName: v__VERSION__
           releaseName: "RN Debugger v__VERSION__"
           releaseBody: "See the assets to download for your OS. macOS builds are unsigned — see README."
-          releaseDraft: true
+          releaseDraft: false  # publica direto (sem draft) — coerente com "tudo como 0.1.4"
           prerelease: false
           args: ${{ matrix.args }}
