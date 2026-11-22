@@ -2,7 +2,7 @@
   "name": "rn-debugger",
   "version": "0.1.1",
   "description": "Zero-config debugger for React Native & Expo — console, network, state, storage (AsyncStorage/MMKV/Firestore) and React DevTools in one desktop app",
-  "keywords": ["react-native", "expo", "debugger", "debug", "devtools", "react-devtools", "reactotron", "flipper", "redux", "zustand", "async-storage", "mmkv", "firestore", "desktop"],
+  "keywords": ["react-native", "expo", "debugger", "debug", "devtools", "react-devtools", "redux", "zustand", "async-storage", "mmkv", "firestore", "desktop"],
   "license": "MIT",
   "author": "Jeremias Santos Lima <jeremiaslimag12@gmail.com>",
   "repository": { "type": "git", "url": "git+https://github.com/JereLima/rn-debugger.git", "directory": "sdk" },

@@ -94,17 +94,7 @@ debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
 ```
 
-### Comparison
-
-| | rn-debugger | Reactotron | react-native-debugger | Flipper |
-|---|---|---|---|---|
-| Maintained | ✅ | slow | legacy (no Hermes / new arch) | discontinued |
-| Setup | `addDebug()` | setup + manual host | bundler flags | native app on device |
-| Works in Expo Go | ✅ | ✅ | ❌ | ❌ |
-| Storage (AsyncStorage/MMKV/Firestore) | ✅ | partial | ❌ | via JS plugins |
-| React DevTools | ✅ | ❌ | ✅ | ❌ |
-
-### Troubleshooting
+### How it connects
 
 Device not connecting? Windows firewall, `--tunnel` mode, port conflicts and more in [docs/troubleshooting.md](docs/troubleshooting.md).
 
@@ -200,16 +190,6 @@ debugZustand(store, name?)
 debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
 ```
-
-### Comparação
-
-| | rn-debugger | Reactotron | react-native-debugger | Flipper |
-|---|---|---|---|---|
-| Mantido | ✅ | lento | legado (sem Hermes / new arch) | descontinuado |
-| Setup | `addDebug()` | setup + host manual | flags no bundler | app nativo no device |
-| Funciona no Expo Go | ✅ | ✅ | ❌ | ❌ |
-| Storage (AsyncStorage/MMKV/Firestore) | ✅ | parcial | ❌ | plugins JS |
-| React DevTools | ✅ | ❌ | ✅ | ❌ |
 
 ### Problemas comuns
 
