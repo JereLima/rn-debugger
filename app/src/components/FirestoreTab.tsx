@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { RotateCcw as RotateCw } from "lucide-react";
+import { Play, RotateCcw as RotateCw } from "lucide-react";
 import type { FsOpEvent } from "../store";
 import { useStore } from "../store";
+import { sendToDevice } from "../bridge";
 
 const OPS = ["read", "write", "delete"] as const;
 type FsOp = (typeof OPS)[number];
@@ -34,7 +35,9 @@ function Card({ label, value, color }: { label: string; value: number; color: st
   );
 }
 
-function OpRow({ e, open, onToggle }: { e: FsOpEvent; open: boolean; onToggle: () => void }) {
+function OpRow({
+  e, open, onToggle, onUsePath,
+}: { e: FsOpEvent; open: boolean; onToggle: () => void; onUsePath?: () => void }) {
   let dataPreview: string | null = null;
   if (open) {
     if (e.data === undefined || e.data === null) dataPreview = null;
@@ -44,10 +47,12 @@ function OpRow({ e, open, onToggle }: { e: FsOpEvent; open: boolean; onToggle: (
   }
   return (
     <div className="border-b border-zinc-800/60">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-1.5 text-left hover:bg-zinc-800/40"
+        onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") onToggle(); }}
+        className="flex w-full cursor-pointer items-center gap-3 px-3 py-1.5 text-left hover:bg-zinc-800/40"
       >
         <span className="shrink-0 font-mono text-xs text-zinc-500">{formatTs(e.ts)}</span>
         <span className={`w-14 shrink-0 font-mono text-[11px] font-bold uppercase ${OP_STYLE[e.op] ?? OP_STYLE.read}`}>
@@ -58,10 +63,20 @@ function OpRow({ e, open, onToggle }: { e: FsOpEvent; open: boolean; onToggle: (
           <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 font-mono text-[10px] text-zinc-200">×{e.n}</span>
         )}
         {e.detail && <span className="shrink-0 font-mono text-[10px] text-zinc-500">{e.detail}</span>}
+        {onUsePath && (
+          <button
+            type="button"
+            title="Usar este path no composer"
+            className="shrink-0 rounded px-1 font-mono text-[11px] text-zinc-600 hover:text-sky-400"
+            onClick={(ev) => { ev.stopPropagation(); onUsePath(); }}
+          >
+            ↥
+          </button>
+        )}
         {e.data !== undefined && (
           <span className="shrink-0 font-mono text-[10px] text-sky-500">{open ? "▾" : "▸"}</span>
         )}
-      </button>
+      </div>
       {open && (
         <div className="px-3 pb-2">
           {dataPreview === null ? (
@@ -80,9 +95,68 @@ function OpRow({ e, open, onToggle }: { e: FsOpEvent; open: boolean; onToggle: (
 export function FirestoreTab() {
   const fs = useStore((s) => s.fs);
   const resetFsSession = useStore((s) => s.resetFsSession);
+  const fsRun = useStore((s) => s.fsRun);
+  const fsRunSubmit = useStore((s) => s.fsRunSubmit);
   const [query, setQuery] = useState("");
   const [opsOff, setOpsOff] = useState<Record<string, boolean>>({});
   const [openIds, setOpenIds] = useState<Record<number, boolean>>({});
+
+  // composer "executar no device"
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [runOp, setRunOp] = useState<"add" | "set" | "update" | "delete">("add");
+  const [runPath, setRunPath] = useState("tasks");
+  const [runJson, setRunJson] = useState('{\n  "text": "tarefa criada do desktop",\n  "done": false\n}');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [runTimeout, setRunTimeout] = useState(false);
+
+  useEffect(() => {
+    setRunTimeout(false);
+    if (!fsRun.pending) return;
+    const t = setTimeout(() => setRunTimeout(true), 6000);
+    return () => clearTimeout(t);
+  }, [fsRun.pending, fsRun.reqId]);
+
+  const byColl = useMemo(() => {
+    const map = new Map<string, { r: number; w: number; d: number }>();
+    for (const e of fs.events) {
+      const coll = (e.path.split("/")[0] || "?").toLowerCase();
+      const cur = map.get(coll) ?? { r: 0, w: 0, d: 0 };
+      if (e.op === "read") cur.r += e.n;
+      else if (e.op === "write") cur.w += e.n;
+      else cur.d += e.n;
+      map.set(coll, cur);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1].r + b[1].w + b[1].d - (a[1].r + a[1].w + a[1].d))
+      .slice(0, 8);
+  }, [fs.events]);
+
+  const runCommand = () => {
+    const text = runJson.trim();
+    let data: unknown = {};
+    if (text && runOp !== "delete") {
+      try {
+        data = JSON.parse(text);
+        setJsonError(null);
+      } catch (e) {
+        setJsonError(`JSON inválido: ${String(e)}`);
+        return;
+      }
+    }
+    if (!runPath.trim()) {
+      setJsonError("path obrigatório — coleção (add) ou col/docId (set/update/delete)");
+      return;
+    }
+    const reqId = crypto.randomUUID();
+    fsRunSubmit(reqId);
+    void sendToDevice({ type: "fs.run", op: runOp, path: runPath.trim(), data, reqId });
+  };
+
+  const usePath = (path: string) => {
+    const seg = path.split("/").filter(Boolean);
+    setRunPath(seg.length >= 2 ? `${seg[0]}/${seg[1]}` : (seg[0] ?? ""));
+    setComposerOpen(true);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -115,6 +189,28 @@ export function FirestoreTab() {
         <Card label="deletes" value={fs.deletes} color={CARD_COLOR.delete} />
       </div>
 
+      {byColl.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 px-3 pb-2">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">coleções</span>
+          {byColl.map(([coll, c]) => (
+            <button
+              key={coll}
+              onClick={() => setQuery(query.trim().toLowerCase() === coll ? "" : coll)}
+              className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                query.trim().toLowerCase() === coll
+                  ? "bg-sky-900/60 text-sky-200"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              {coll}
+              {c.r > 0 && <span className="text-sky-400"> {c.r}r</span>}
+              {c.w > 0 && <span className="text-emerald-400"> {c.w}w</span>}
+              {c.d > 0 && <span className="text-red-400"> {c.d}d</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 p-2">
         <input
           value={query}
@@ -137,6 +233,15 @@ export function FirestoreTab() {
         </div>
         <span className="font-mono text-[10px] text-zinc-500">sessão: ~{mins} min</span>
         <button
+          onClick={() => setComposerOpen((v) => !v)}
+          className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs ${
+            composerOpen ? "bg-sky-800 text-sky-100" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          }`}
+          title="Executar uma op de Firestore direto no device"
+        >
+          <Play size={13} /> Device
+        </button>
+        <button
           onClick={resetFsSession}
           className="ml-auto flex items-center gap-1 rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700"
           title="Zerar contadores da sessão"
@@ -144,6 +249,60 @@ export function FirestoreTab() {
           <RotateCw size={13} /> Reiniciar sessão
         </button>
       </div>
+
+      {composerOpen && (
+        <div className="flex flex-col gap-2 border-b border-zinc-800 bg-zinc-900/60 p-3">
+          <div className="flex items-center gap-2">
+            <select
+              value={runOp}
+              onChange={(e) => setRunOp(e.target.value as typeof runOp)}
+              className="rounded-md bg-zinc-800 px-2 py-1.5 font-mono text-xs text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            >
+              <option value="add">add</option>
+              <option value="set">set</option>
+              <option value="update">update</option>
+              <option value="delete">delete</option>
+            </select>
+            <input
+              value={runPath}
+              onChange={(e) => setRunPath(e.target.value)}
+              placeholder="tasks (add) ou tasks/abc123 (set/update/delete)"
+              className="flex-1 rounded-md bg-zinc-800 px-2.5 py-1.5 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            />
+            <button
+              onClick={runCommand}
+              className="flex items-center gap-1 rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-emerald-50 hover:bg-emerald-600"
+            >
+              <Play size={12} /> Executar
+            </button>
+          </div>
+          {runOp !== "delete" && (
+            <textarea
+              value={runJson}
+              onChange={(e) => { setRunJson(e.target.value); setJsonError(null); }}
+              rows={5}
+              spellCheck={false}
+              placeholder='{"text": "nova tarefa", "done": false}'
+              className="w-full resize-y rounded-md bg-zinc-800 px-2.5 py-1.5 font-mono text-[11px] text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            />
+          )}
+          {jsonError && <p className="font-mono text-[11px] text-red-400">✖ {jsonError}</p>}
+          {fsRun.pending && (
+            <p className="font-mono text-[11px] text-zinc-400">
+              aguardando device…
+              {runTimeout ? " sem resposta — device conectado? Firestore configurado neste build?" : ""}
+            </p>
+          )}
+          {!fsRun.pending && fsRun.last && (
+            <p className={`font-mono text-[11px] ${fsRun.last.ok ? "text-emerald-400" : "text-red-400"}`}>
+              {fsRun.last.ok ? "✔" : "✖"} {fsRun.last.text}
+            </p>
+          )}
+          <p className="font-mono text-[10px] text-zinc-500">
+            add → nova id gerada · set → sobrescreve o doc · update → merge de campos · delete → remove. A op aparece no feed abaixo como se fosse do app.
+          </p>
+        </div>
+      )}
 
       <div ref={parentRef} className="flex-1 overflow-auto">
         {filtered.length === 0 ? (
@@ -170,6 +329,7 @@ export function FirestoreTab() {
                     e={e}
                     open={!!openIds[e.id]}
                     onToggle={() => setOpenIds((d) => ({ ...d, [e.id]: !d[e.id] }))}
+                    onUsePath={() => usePath(e.path)}
                   />
                 </div>
               );

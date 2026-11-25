@@ -59,6 +59,14 @@ export interface FsSession {
   startedAt: number; events: FsOpEvent[];
 }
 
+export interface FsRunResult {
+  reqId: string; ok: boolean; text: string; docId?: string; ts: number;
+}
+
+export interface FsRunState {
+  pending: boolean; reqId?: string; last?: FsRunResult;
+}
+
 const MAX_LOGS = 5000;
 const MAX_NETWORK = 1000;
 
@@ -100,6 +108,9 @@ interface Store {
   clearDevtoolsInbox(): void;
   addFsOp(msg: any): void;
   resetFsSession(): void;
+  fsRun: FsRunState;
+  fsRunSubmit(reqId: string): void;
+  addFsResult(msg: any): void;
 }
 
 export const useStore = create<Store>((set) => ({
@@ -251,6 +262,25 @@ export const useStore = create<Store>((set) => ({
       };
     }),
   resetFsSession: () => set({ fs: { reads: 0, writes: 0, deletes: 0, startedAt: Date.now(), events: [] } }),
+
+  fsRun: { pending: false },
+
+  fsRunSubmit: (reqId) => set({ fsRun: { pending: true, reqId } }),
+
+  addFsResult: (msg) =>
+    set((s) => {
+      // resposta de requisição anterior chegando depois de outra: ignora
+      if (s.fsRun.pending && s.fsRun.reqId && msg.reqId && msg.reqId !== s.fsRun.reqId) return {};
+      return {
+        fsRun: {
+          pending: false,
+          last: {
+            reqId: String(msg.reqId ?? ""), ok: !!msg.ok, text: String(msg.text ?? ""),
+            docId: msg.docId, ts: msg.ts ?? Date.now(),
+          },
+        },
+      };
+    }),
 
   setDevtoolsClient: (clientId) => set({ devtoolsClientId: clientId }),
   pushDevtoolsFrame: (text) =>
