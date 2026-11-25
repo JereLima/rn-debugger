@@ -3,7 +3,7 @@ import { Connector } from "./connector";
 import { patchConsole } from "./console";
 import { patchFetch, patchNetwork, shouldIgnore } from "./network";
 import { patchAsyncStorage, patchMMKV } from "./storage";
-import { patchFirestore } from "./firestore";
+import { patchFirestore, registerFsRun } from "./firestore";
 import { dispatchDeviceCommand, onDeviceCommand } from "./commands";
 import { enableReactDevToolsViaSdk } from "./devtools";
 
@@ -47,8 +47,12 @@ export function debugMMKVInternal(instance: any, name = "mmkv") {
 export function debugFirestoreInternal(api: any, db: any, options: any = {}) {
   if (!connector || !api) return;
   try {
+    const sendToDesktop = (m: object) => { try { connector?.send(m); } catch { /* ignore */ } };
     // patchFirestore é idempotente por módulo (api.__dbFirestore).
-    patchFirestore((m) => { try { connector?.send(m); } catch { /* ignore */ } }, api, db, options);
+    patchFirestore(sendToDesktop, api, db, options);
+    // Comandos fs.run: o desktop executa writes pelo device (o resultado
+    // volta ao feed via as funções instrumentadas acima).
+    registerFsRun(api, sendToDesktop);
   } catch { /* nunca quebrar o app do usuário */ }
 }
 
