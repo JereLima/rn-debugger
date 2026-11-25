@@ -69,12 +69,12 @@ export default function seedDemo() {
 
   // -- firestore (experimental) --
   const fsOps = [
-    { op: "read", n: 12, path: "users/u_881", detail: "get()" },
-    { op: "write", n: 1, path: "carts/u_881/items", detail: "arrayUnion(817)" },
-    { op: "read", n: 1, path: "products", detail: "query(limit=20)" },
-    { op: "write", n: 3, path: "users/u_881/telemetry", detail: "batch()" },
+    { op: "read", n: 12, path: "users/u_881", detail: "get()", data: { id: "u_881", name: "Ada Lovelace", city: "São Paulo", createdAt: "2026-11-20T12:04:00.000Z" } },
+    { op: "write", n: 1, path: "carts/u_881/items", detail: "arrayUnion(817)", data: { items: [801, 802, 817] } },
+    { op: "read", n: 1, path: "products", detail: "query(limit=20)", data: { docs: [{ id: "p_801", title: "Camiseta RN", price: 79.9 }], more: 19 } },
+    { op: "write", n: 3, path: "users/u_881/telemetry", detail: "batch()", data: { w: 3, d: 0 } },
     { op: "delete", n: 1, path: "carts/u_881/coupon" },
-    { op: "read", n: 4, path: "coupons/BLACK30" },
+    { op: "read", n: 4, path: "coupons/BLACK30", data: { docs: [{ id: "BLACK30", pct: 30, validUntil: "2026-12-01T00:00:00.000Z" }, { id: "FRIDAY10", pct: 10 }] } },
   ];
   for (const [i, op] of fsOps.entries()) {
     s.getState().addFsOp({ type: "fs.op", ts: t(50 - i * 6), ...op });

@@ -50,6 +50,8 @@ export interface FsOpEvent {
   id: number; ts: number;
   op: "read" | "write" | "delete";
   n: number; path: string; detail?: string;
+  /** Amostra do payload/resultado (SDK: writes → payload, reads → primeiros docs, cap 3). */
+  data?: unknown;
 }
 
 export interface FsSession {
@@ -236,7 +238,7 @@ export const useStore = create<Store>((set) => ({
       const n = Number.isFinite(msg.n) ? Number(msg.n) : 0;
       const events = [...s.fs.events, {
         id: nextId++, ts: msg.ts ?? Date.now(), op, n,
-        path: String(msg.path ?? "?"), detail: msg.detail,
+        path: String(msg.path ?? "?"), detail: msg.detail, data: msg.data,
       }];
       return {
         fs: {

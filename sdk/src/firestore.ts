@@ -9,6 +9,8 @@
 // - setDoc/updateDoc/addDoc: 1 write; deleteDoc: 1 delete; batch/transaction somam no commit.
 // - leituras de cache (getDocFromCache etc.): 0 reads.
 
+import { safeSerialize } from "./serializer";
+
 type Send = (msg: object) => void;
 
 export interface FirestoreDebugOptions {
@@ -38,6 +40,48 @@ function labelOf(ref: any): string {
   return "query";
 }
 
+/** Payload de um write: (ref, data) | (ref, "campo", valor). */
+function writePayload(rest: any[]): unknown {
+  try {
+    if (rest.length === 1) return rest[0];
+    if (rest.length === 2 && typeof rest[0] === "string") return { [rest[0]]: rest[1] };
+  } catch { /* ignore */ }
+  return undefined; // merge/FieldPath/arrayUnion… — sem payload simples
+}
+
+/** Firestore-specific: Timestamp → ISO, GeoPoint → lat/lng; depois safeSerialize (caps). */
+function plainFirestore(value: unknown): unknown {
+  try {
+    const json = JSON.stringify(value, (_k, v: any) => {
+      if (v && typeof v === "object") {
+        if (typeof v.toDate === "function") return v.toDate().toISOString();
+        if (typeof v.latitude === "number" && typeof v.longitude === "number") {
+          return { lat: v.latitude, lng: v.longitude };
+        }
+      }
+      return v;
+    });
+    if (json !== undefined) return JSON.parse(json);
+  } catch { /* circular/exótico → fallback */ }
+  return safeSerialize(value);
+}
+
+/** Amostra dos docs de um snapshot (cap de 3) — o feed mostra o dado, não só a contagem. */
+const DOCS_CAP = 3;
+function docsOfSnapshot(snap: any): unknown {
+  try {
+    if (snap && typeof snap.size === "number" && Array.isArray(snap.docs)) {
+      const docs = snap.docs.slice(0, DOCS_CAP).map((d: any) => ({ id: d.id, ...(d.data?.() ?? {}) }));
+      const more = snap.size > DOCS_CAP ? { more: snap.size - DOCS_CAP } : {};
+      return plainFirestore({ docs, ...more });
+    }
+    if (snap && typeof snap.exists === "function") {
+      return plainFirestore(snap.exists() ? { id: snap.id, ...snap.data() } : { missing: true });
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
 /** Patch do módulo Firestore (API modular — RNFB v26+ e JS SDK).
  *  Idempotente: api.__dbFirestore marca módulos já instrumentados. */
 export function patchFirestore(
@@ -50,9 +94,12 @@ export function patchFirestore(
   (api as any).__dbFirestore = true;
   const shouldLog = options.log !== false;
 
-  const emit = (op: "read" | "write" | "delete", n: number, path: string, fn: string) => {
+  const emit = (op: "read" | "write" | "delete", n: number, path: string, fn: string, data?: unknown) => {
     try {
-      send({ v: 1, type: "fs.op", ts: Date.now(), op, n, path, detail: fn });
+      send({
+        v: 1, type: "fs.op", ts: Date.now(), op, n, path, detail: fn,
+        ...(data !== undefined ? { data } : {}),
+      });
     } catch { /* nunca quebrar o app do usuário */ }
     if (shouldLog) {
       try {
@@ -144,7 +191,7 @@ export function patchFirestore(
       netReq(id, "read", path, name);
       try {
         const snap = await orig(ref, ...rest);
-        emit("read", count(snap), path, name);
+        emit("read", count(snap), path, name, docsOfSnapshot(snap));
         netRes(id, path, Date.now() - t0, note(snap));
         return snap;
       } catch (e) {
@@ -202,7 +249,8 @@ export function patchFirestore(
       netReq(id, op, path, name);
       try {
         const out = await orig(ref, ...rest);
-        emit(op, 1, path, name);
+        const data = op === "write" ? plainFirestore(writePayload(rest)) : undefined;
+        emit(op, 1, path, name, data);
         netRes(id, path, Date.now() - t0);
         return out;
       } catch (e) {
@@ -243,8 +291,13 @@ export function patchFirestore(
 
         const wrapCb = (cb: (s: any) => unknown) => (snap: any) => {
           const n = readsOf(snap);
-          if (firstEvent) { firstEvent = false; netRes(id, path, Date.now() - t0, "listener"); }
-          if (n > 0) emit("read", n, path, "onSnapshot");
+          let data: unknown;
+          if (firstEvent) {
+            data = docsOfSnapshot(snap); // amostra dos docs iniciais
+            firstEvent = false;
+            netRes(id, path, Date.now() - t0, "listener");
+          }
+          if (n > 0 || data !== undefined) emit("read", n, path, "onSnapshot", data);
           return cb(snap);
         };
 

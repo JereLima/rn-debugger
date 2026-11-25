@@ -34,18 +34,45 @@ function Card({ label, value, color }: { label: string; value: number; color: st
   );
 }
 
-function OpRow({ e }: { e: FsOpEvent }) {
+function OpRow({ e, open, onToggle }: { e: FsOpEvent; open: boolean; onToggle: () => void }) {
+  let dataPreview: string | null = null;
+  if (open) {
+    if (e.data === undefined || e.data === null) dataPreview = null;
+    else {
+      try { dataPreview = JSON.stringify(e.data, null, 2); } catch { dataPreview = String(e.data); }
+    }
+  }
   return (
-    <div className="flex items-center gap-3 border-b border-zinc-800/60 px-3 py-1.5">
-      <span className="shrink-0 font-mono text-xs text-zinc-500">{formatTs(e.ts)}</span>
-      <span className={`w-14 shrink-0 font-mono text-[11px] font-bold uppercase ${OP_STYLE[e.op] ?? OP_STYLE.read}`}>
-        {e.op}
-      </span>
-      <span className="min-w-0 flex-1 truncate font-mono text-xs text-zinc-300">{e.path}</span>
-      {e.n > 1 && (
-        <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 font-mono text-[10px] text-zinc-200">×{e.n}</span>
+    <div className="border-b border-zinc-800/60">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-3 py-1.5 text-left hover:bg-zinc-800/40"
+      >
+        <span className="shrink-0 font-mono text-xs text-zinc-500">{formatTs(e.ts)}</span>
+        <span className={`w-14 shrink-0 font-mono text-[11px] font-bold uppercase ${OP_STYLE[e.op] ?? OP_STYLE.read}`}>
+          {e.op}
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-zinc-300">{e.path}</span>
+        {e.n > 1 && (
+          <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 font-mono text-[10px] text-zinc-200">×{e.n}</span>
+        )}
+        {e.detail && <span className="shrink-0 font-mono text-[10px] text-zinc-500">{e.detail}</span>}
+        {e.data !== undefined && (
+          <span className="shrink-0 font-mono text-[10px] text-sky-500">{open ? "▾" : "▸"}</span>
+        )}
+      </button>
+      {open && (
+        <div className="px-3 pb-2">
+          {dataPreview === null ? (
+            <p className="font-mono text-[11px] text-zinc-500">sem payload capturado</p>
+          ) : (
+            <pre className="max-h-56 overflow-auto rounded bg-zinc-900 p-2 font-mono text-[11px] leading-relaxed text-zinc-300">
+              {dataPreview}
+            </pre>
+          )}
+        </div>
       )}
-      {e.detail && <span className="shrink-0 font-mono text-[10px] text-zinc-500">{e.detail}</span>}
     </div>
   );
 }
@@ -55,6 +82,7 @@ export function FirestoreTab() {
   const resetFsSession = useStore((s) => s.resetFsSession);
   const [query, setQuery] = useState("");
   const [opsOff, setOpsOff] = useState<Record<string, boolean>>({});
+  const [openIds, setOpenIds] = useState<Record<number, boolean>>({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -138,7 +166,11 @@ export function FirestoreTab() {
                   ref={virtualizer.measureElement}
                   data-index={v.index}
                 >
-                  <OpRow e={e} />
+                  <OpRow
+                    e={e}
+                    open={!!openIds[e.id]}
+                    onToggle={() => setOpenIds((d) => ({ ...d, [e.id]: !d[e.id] }))}
+                  />
                 </div>
               );
             })}
