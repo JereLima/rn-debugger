@@ -10,3 +10,5 @@ sdk/dist/
 example/.expo/
 example/ios/
 example/android/
+example/google-services.json
+example/GoogleService-Info.plist
