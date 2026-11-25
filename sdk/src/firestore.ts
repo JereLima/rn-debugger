@@ -21,6 +21,14 @@ const nextId = () => `fs_${++seq}`;
 
 const MAX_LABEL = 120;
 
+/** Avisa uma única vez por mensagem — patch que falha não pode ser invisível. */
+const warned = new Set<string>();
+function warnOnce(msg: string) {
+  if (warned.has(msg)) return;
+  warned.add(msg);
+  try { console.warn(msg); } catch { /* ignore */ }
+}
+
 function labelOf(ref: any): string {
   try {
     if (typeof ref === "string") return ref.slice(0, MAX_LABEL);
@@ -77,7 +85,19 @@ export function patchFirestore(
     (impl as any).__dbOrig = orig;
     try {
       (api as any)[name] = impl;
-    } catch { /* módulo selado: pula silenciosamente */ }
+    } catch {
+      // Exports getter-only (Babel defineProperty sem setter, ex.: RNFB v27):
+      // tenta redefinir; se o módulo for mesmo selado, AVISA em vez de fingir
+      // que instrumentou — silêncio aqui vira "debugger não pega nada" lá na frente.
+      try {
+        Object.defineProperty(api, name, { value: impl, writable: true, configurable: true });
+      } catch {
+        warnOnce(
+          `rn-debugger: could not patch "${name}" — module exports are read-only. ` +
+            `Pass a mutable facade (e.g. a plain object spreading the module) to debugFirestore().`,
+        );
+      }
+    }
   };
 
   const t0Of = () => Date.now();
