@@ -78,23 +78,31 @@ export function addDebugInternal(
   started = true;
 
   const port = options.port ?? 9090;
+
+  /** Hello em cada (re)conexão. Sem isso, um restart do app desktop deixa a
+   *  sessão fantasma: o socket reconecta, mas o desktop nunca re-registra o
+   *  app e a UI fica vazia até o app recarregar. O Connector chama onStatus
+   *  ("connected") antes do flush da fila, então o hello chega sempre primeiro. */
+  const sendHello = () => {
+    try {
+      connector?.send({
+        v: 1, type: "hello", ts: Date.now(),
+        device: {
+          platform: Platform.OS,
+          platformVersion: String((Platform as any).Version ?? ""),
+          ...(extras.deviceInfo ?? {}),
+        },
+        app: { name: extras.appName ?? "", ...(options.reactDevTools ? { reactDevTools: true } : {}) },
+      });
+    } catch { /* nunca quebrar o app do usuário */ }
+  };
+
   connector = new Connector(
     port,
     (msg) => { dispatchDeviceCommand(msg); },
-    () => { /* status interno; sem UI no device */ },
+    (status) => { if (status === "connected") sendHello(); },
   );
   connector.start(buildCandidates(options.host, extras.devHost));
-
-  // Hello assim que conectar — enviado como primeira mensagem enfileirada.
-  connector.send({
-    v: 1, type: "hello", ts: Date.now(),
-    device: {
-      platform: Platform.OS,
-      platformVersion: String((Platform as any).Version ?? ""),
-      ...(extras.deviceInfo ?? {}),
-    },
-    app: { name: extras.appName ?? "", ...(options.reactDevTools ? { reactDevTools: true } : {}) },
-  });
 
   if (options.reactDevTools) {
     try { enableReactDevToolsViaSdk(connector); } catch { /* nunca quebrar o app do usuário */ }
