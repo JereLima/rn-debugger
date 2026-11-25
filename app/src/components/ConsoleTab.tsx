@@ -48,6 +48,12 @@ function isErrorLike(v: unknown): v is { __error: true; name: string; message: s
   );
 }
 
+/** Logs gerados pelo inspector de Firestore (patchFirestore emite "[fs] ..."). */
+function isFsLog(l: LogEntry): boolean {
+  const first = l.args?.[0];
+  return typeof first === "string" && first.startsWith("[fs] ");
+}
+
 function ArgView({ value }: { value: unknown }) {
   if (value === null) return <span className="text-zinc-500">null</span>;
   if (value === undefined) return <span className="text-zinc-500">undefined</span>;
@@ -115,6 +121,7 @@ export function ConsoleTab() {
   const [disabled, setDisabled] = useState<Record<Level, boolean>>({
     log: false, info: false, warn: false, error: false, debug: false,
   });
+  const [fsHidden, setFsHidden] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<Level, number> = { log: 0, info: 0, warn: 0, error: 0, debug: 0 };
@@ -122,10 +129,13 @@ export function ConsoleTab() {
     return c;
   }, [logs]);
 
+  const fsCount = useMemo(() => logs.filter(isFsLog).length, [logs]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return logs.filter((l) => {
       if (disabled[l.level]) return false;
+      if (fsHidden && isFsLog(l)) return false;
       if (!q) return true;
       try {
         return JSON.stringify(l.args).toLowerCase().includes(q);
@@ -133,7 +143,7 @@ export function ConsoleTab() {
         return false;
       }
     });
-  }, [logs, query, disabled]);
+  }, [logs, query, disabled, fsHidden]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -169,6 +179,16 @@ export function ConsoleTab() {
             </button>
           ))}
         </div>
+        <div className="h-4 w-px bg-zinc-700" />
+        <button
+          onClick={() => setFsHidden((v) => !v)}
+          title="Logs do inspector de Firestore ([fs] read/write/delete)"
+          className={`rounded px-2 py-1 font-mono text-[10px] font-bold uppercase ${
+            fsHidden ? "bg-zinc-800 text-zinc-600 line-through" : "bg-emerald-600/80 text-emerald-50"
+          }`}
+        >
+          fs {fsCount}
+        </button>
         <button
           onClick={clearLogs}
           className="ml-auto rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700"
