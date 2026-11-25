@@ -4,6 +4,7 @@ import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
+import { FirebaseSmokeTest } from '@/components/firebase-smoke-test';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
@@ -118,6 +119,17 @@ export default function TabTwoScreen() {
               animate opening this hint.
             </ThemedText>
           </Collapsible>
+
+          {Platform.OS !== 'web' && (
+            <Collapsible title="Firebase (Firestore)">
+              <ThemedText type="small">
+                Smoke test do React Native Firebase: grava e lê documentos no Firestore usando os
+                arquivos de config soltos em <ThemedText type="code">example/</ThemedText>. Siga os
+                passos de <ThemedText type="code">example/FIREBASE.md</ThemedText> e teste aqui.
+              </ThemedText>
+              <FirebaseSmokeTest />
+            </Collapsible>
+          )}
         </ThemedView>
         {Platform.OS === 'web' && <WebBadge />}
       </ThemedView>
