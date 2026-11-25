@@ -37,6 +37,11 @@ pnpm --filter rn-debugger build
 cd example && npm install ../sdk
 ```
 
+> **Metro caches `node_modules` transforms.** After re-syncing the SDK copy, restart the
+> dev server with `npx expo start --clear` — otherwise Metro keeps serving the old
+> bundle and your SDK changes silently never load (the app connects fine, but the new
+> code never runs). If an SDK change "doesn't work", this is the first thing to check.
+
 ## Workflow
 
 1. Fork, create a branch from `main`
