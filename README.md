@@ -92,6 +92,13 @@ debugZustand(store, name?)
 // Storage — always pass the module/instance as an argument
 debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
+
+// Firestore — read/write/delete counters + op feed in the desktop app (experimental).
+// Pass a MUTABLE facade, not the module itself: Firebase v27 exports are read-only
+// getters, so the SDK patches the facade instead.
+import * as RNFBFirestore from "@react-native-firebase/firestore";
+debugFirestore({ ...RNFBFirestore }, null)
+// Bonus: the desktop can run add/set/update/delete on the connected device (fs.run).
 ```
 
 ### Multiple stores
@@ -213,6 +220,13 @@ debugZustand(store, name?)
 // Storage — sempre passe o módulo/instância como argumento
 debugAsyncStorage(AsyncStorage)
 debugMMKV(instance, name?)
+
+// Firestore — contadores de leitura/escrita/deleção + feed de ops no app desktop (experimental).
+// Passe uma FACHADA MUTÁVEL, não o módulo direto: os exports do Firebase v27 são
+// getters somente-leitura, então o SDK instrumenta a fachada.
+import * as RNFBFirestore from "@react-native-firebase/firestore";
+debugFirestore({ ...RNFBFirestore }, null)
+// Bônus: o desktop pode executar add/set/update/delete no device conectado (fs.run).
 ```
 
 ### Várias stores
